@@ -6,10 +6,11 @@ import os
 import redis
 
 # ─────────────────────────────────────────
-# CONFIGURAÇÃO — 4 CARACTERES, APENAS LETRAS
+# CONFIGURAÇÃO — 4 CARACTERES, LETRAS E NÚMEROS
 # ─────────────────────────────────────────
 TAMANHO = 4
-CHARS = string.ascii_lowercase + string.digits
+# Combina letras minúsculas (a-z) e números (0-9)
+CHARS = string.ascii_lowercase + string.digits  
 DELAY = 10.0
 
 # Conexão Automática com o Redis do Railway para lembrar dos nicks já testados
@@ -20,18 +21,9 @@ if REDIS_URL:
 else:
     db = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
-# Lista de Proxies Fixas (Webshare) — Agora com as portas INDIVIDUAIS corretas!
+# Lista de Proxies Fixas (Webshare)
 PROXIES_LISTA = [
-    # "http://jjqzajjj:elw3a92t7zib@31.59.20.176:6754/",
-    # "http://jjqzajjj:elw3a92t7zib@31.56.127.193:7684/",
-    # "http://jjqzajjj:elw3a92t7zib@45.38.107.97:6014/", 
-    # "http://jjqzajjj:elw3a92t7zib@38.154.203.95:5863/",
-    # "http://jjqzajjj:elw3a92t7zib@198.105.121.200:6462/",
-    # "http://jjqzajjj:elw3a92t7zib@64.137.96.74:6641/",
-    # "http://jjqzajjj:elw3a92t7zib@198.23.243.226:6361/",
-    # "http://jjqzajjj:elw3a92t7zib@38.154.185.97:6370/",
-    # "http://jjqzajjj:elw3a92t7zib@142.111.67.146:5611/",
-    # "http://jjqzajjj:elw3a92t7zib@191.96.254.138:6185/" 
+    # Suas proxies entram aqui...
 ]
 # ─────────────────────────────────────────
 
@@ -62,7 +54,6 @@ def verificar_disponibilidade(username, proxy_url=None):
         "consent": True
     }
     
-    # Força a conversão para SOCKS5, que resolve o bloqueio de handshake da Webshare no Railway
     proxies_config = None
     if proxy_url:
         socks_url = proxy_url.replace("http://", "socks5://")
@@ -72,7 +63,6 @@ def verificar_disponibilidade(username, proxy_url=None):
         }
 
     try:
-        # Timeout curto de 5s para rodar mais fluido
         r = requests.post(url, json=payload, headers=HEADERS, proxies=proxies_config, timeout=5)
         data = r.json()
         errors = str(data)
@@ -98,7 +88,7 @@ def verificar_disponibilidade(username, proxy_url=None):
         return None
 
 def main():
-    print("🎯 Discord Finder — 4 letras + Logs do Railway", flush=True)
+    print("🎯 Discord Finder — 4 letras + Números | Logs do Railway", flush=True)
     print("=" * 50, flush=True)
     print(f"Caracteres: {CHARS}", flush=True)
     print(f"Combinações possíveis: {len(CHARS)**TAMANHO:,}", flush=True)
@@ -108,8 +98,9 @@ def main():
     print("🔗 Conectando ao Redis...", end="", flush=True)
     
     try:
-        total_testados_inicial = db.scard("discord:4letras:testados")
-        total_achados_inicial = db.scard("discord:4letras:disponiveis")
+        # Alterado para '4letras_num' para isolar os bancos
+        total_testados_inicial = db.scard("discord:4letras_num:testados")
+        total_achados_inicial = db.scard("discord:4letras_num:disponiveis")
         print(f" ✅ Conectado! {total_testados_inicial} conhecidos | {total_achados_inicial} já encontrados.", flush=True)
     except redis.RedisError as e:
         print(f"\n🚨 Erro crítico ao conectar no Redis: {e}", flush=True)
@@ -124,7 +115,8 @@ def main():
     while True:
         nick = gerar_nick()
         
-        if db.sismember("discord:4letras:testados", nick):
+        # Alterado para '4letras_num'
+        if db.sismember("discord:4letras_num:testados", nick):
             continue
         
         print(f"[{tentativas_sessao+1:>5}] Testando: {nick} ... ", end="", flush=True)
@@ -135,14 +127,16 @@ def main():
         if disponivel is True:
             tentativas_sessao += 1
             print(" ✨🎉 ✅ DISPONÍVEL! ✅ 🎉✨", flush=True)
-            db.sadd("discord:4letras:testados", nick)
-            db.sadd("discord:4letras:disponiveis", nick)
+            # Alterado para '4letras_num'
+            db.sadd("discord:4letras_num:testados", nick)
+            db.sadd("discord:4letras_num:disponiveis", nick)
             time.sleep(DELAY)
 
         elif disponivel is False:
             tentativas_sessao += 1
             print(" ❌ ocupado", flush=True)
-            db.sadd("discord:4letras:testados", nick)
+            # Alterado para '4letras_num'
+            db.sadd("discord:4letras_num:testados", nick)
             time.sleep(DELAY)
 
         else:
@@ -150,8 +144,9 @@ def main():
             print(f" -> 🔄 Pulando {se_com_proxy}", flush=True)
 
         if tentativas_sessao > 0 and tentativas_sessao % 10 == 0 and disponivel is not None:
-            total_geral = db.scard("discord:4letras:testados")
-            total_sucessos = db.scard("discord:4letras:disponiveis")
+            # Alterado para '4letras_num'
+            total_geral = db.scard("discord:4letras_num:testados")
+            total_sucessos = db.scard("discord:4letras_num:disponiveis")
             print(f"  📊 Progresso: {total_geral} testados | ⭐ {total_sucessos} DISPONÍVEIS salvos.", flush=True)
 
 
